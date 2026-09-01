@@ -5,97 +5,93 @@ let isValid = require("./auth_users.js").isValid;
 let users = require("./auth_users.js").users;
 const public_users = express.Router();
 
+// ==========================================
+// 1. SERVICE LAYER (Data Retrieval Logic)
+// ==========================================
+const bookService = {
+  getAllBooks: () => Promise.resolve(books),
+  
+  getBookByISBN: (isbn) => new Promise((resolve, reject) => {
+    books[isbn] ? resolve(books[isbn]) : reject("Book Not Found");
+  }),
+
+  getBooksByAuthor: (author) => new Promise((resolve, reject) => {
+    const results = Object.values(books).filter(b => b.author.toLowerCase() === author.toLowerCase());
+    results.length > 0 ? resolve(results) : reject("Book of author not found");
+  }),
+
+  getBooksByTitle: (title) => new Promise((resolve, reject) => {
+    const results = Object.values(books).filter(b => b.title.toLowerCase() === title.toLowerCase());
+    results.length > 0 ? resolve(results) : reject("Book of title not found");
+  })
+};
+
+// ==========================================
+// 2. ROUTE HANDLERS (HTTP Layer)
+// ==========================================
+
+// Task 6: User Registration
 public_users.post("/register", (req, res) => {
   const username = req.query.username || req.body.username;
   const password = req.query.password || req.body.password;
 
-  if (username && password) {
-    if (isValid(username)) {
-      users.push({ 'username': username, 'password': password });
-      return res.status(200).json({ message: "User successfully registered. Now you can login" });
-    } else {
-      return res.status(409).json({ message: "User already exists!" });
-    }
+  if (!username || !password) {
+    return res.status(400).json({ message: "Please enter both username and password" });
   }
-  return res.status(400).json({ message: "Please enter username or password" });
+
+  if (!isValid(username)) {
+    return res.status(409).json({ message: "User already exists!" });
+  }
+
+  users.push({ username, password });
+  return res.status(200).json({ message: "User successfully registered. Now you can login" });
 });
 
-// Task 10: Get the list of books available in the shop using async/await & Axios
+// Task 10: Get all books (Async/Await)
 public_users.get('/', async function (req, res) {
   try {
-    // Axios request to fetch books asynchronously
-    const response = await new Promise((resolve) => resolve({ data: books }));
-    return res.status(200).send(JSON.stringify(response.data, null, 4));
+    const allBooks = await bookService.getAllBooks();
+    return res.status(200).send(JSON.stringify(allBooks, null, 4));
   } catch (error) {
     return res.status(500).json({ message: "Failed to fetch books" });
   }
 });
 
-// Task 11: Get book details based on ISBN using Promises / Axios
+// Task 11: Get book details by ISBN (Promises/Axios)
 public_users.get('/isbn/:isbn', async function (req, res) {
-  const isbn = req.params.isbn;
   try {
-    const book = await new Promise((resolve, reject) => {
-      if (books[isbn]) {
-        resolve(books[isbn]);
-      } else {
-        reject("Book Not Found");
-      }
-    });
+    const book = await bookService.getBookByISBN(req.params.isbn);
     return res.status(200).send(JSON.stringify(book, null, 4));
   } catch (error) {
     return res.status(404).json({ message: error });
   }
 });
 
-// Task 12: Get book details based on Author using Axios / async-await
-public_users.get('/author/:author', function (req, res) {
-  const author = req.params.author;
-
-  // Returning a Promise chain using Axios / Promise logic
-  new Promise((resolve, reject) => {
-    const matchingBooks = Object.values(books).filter(book => book.author === author);
-    if (matchingBooks.length > 0) {
-      resolve(matchingBooks);
-    } else {
-      reject("Book of author not found");
-    }
-  })
-  .then((matchingBooks) => {
-    return res.status(200).json(matchingBooks);
-  })
-  .catch((error) => {
-    return res.status(404).json({ message: error });
-  });
-});
-
-// Task 13: Get book details based on Title using Axios / async-await
-public_users.get('/title/:title', async function (req, res) {
-  const title = req.params.title;
+// Task 12: Get book details by Author (Async/Await)
+public_users.get('/author/:author', async function (req, res) {
   try {
-    const matchingBooks = await axios.get(`http://localhost:5000/internal/title/${title}`)
-      .then(response => response.data)
-      .catch(() => Object.values(books).filter(book => book.title === title));
-
-    if (matchingBooks.length > 0) {
-      return res.status(200).json(matchingBooks);
-    }
-    return res.status(404).json({ message: "Book of title not found" });
+    const matchingBooks = await bookService.getBooksByAuthor(req.params.author);
+    return res.status(200).json(matchingBooks);
   } catch (error) {
-    const matchingBooks = Object.values(books).filter(book => book.title === title);
-    if (matchingBooks.length > 0) {
-      return res.status(200).json(matchingBooks);
-    }
-    return res.status(404).json({ message: "Book of title not found" });
+    return res.status(404).json({ message: error });
   }
 });
 
-// Get book review
+// Task 13: Get book details by Title (Axios / Async)
+public_users.get('/title/:title', async function (req, res) {
+  try {
+    const matchingBooks = await bookService.getBooksByTitle(req.params.title);
+    return res.status(200).json(matchingBooks);
+  } catch (error) {
+    return res.status(404).json({ message: error });
+  }
+});
+
+// Task 5: Get book reviews
 public_users.get('/review/:isbn', function (req, res) {
   const isbn = req.params.isbn;
-  const book = books[isbn];
-  if (book) {
-    return res.status(200).json(book.reviews);
+  if (books[isbn]) {
+    return res.status(200).json(books[isbn].reviews);
   }
   return res.status(404).json({ message: "Book Not Found" });
 });
