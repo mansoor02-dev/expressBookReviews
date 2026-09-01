@@ -21,6 +21,13 @@ public_users.post("/register", (req,res) => {
 });
 
 // Get the book list available in the shop
+
+// ====== Sync =======
+// public_users.get('/',function (req, res) {
+//   //Write your code here
+//   return res.send(JSON.stringify(books, null, 4));
+// });
+
 // ====== Async =======
 public_users.get('/',async function (req, res) {
   try {
@@ -40,9 +47,9 @@ public_users.get('/isbn/:isbn',async function (req, res) {
   const isbn = req.params.isbn;
   try  {
     const book = await new Promise((resolve, reject) => {
-      resolve(book);
+      resolve(books[isbn]);
     })
-    return res.send(JSON.stringify(books[isbn], null, 4));
+    return res.send(JSON.stringify(book, null, 4));
   } catch {
     return res.status(404).json({message: "Book Not Found"});
   }
@@ -75,12 +82,10 @@ public_users.get('/title/:title', async function (req, res) {
 
 
 //  Get book review
-public_users.get('/review/:isbn', async function (req, res) {
+public_users.get('/review/:isbn',function (req, res) {
   //Write your code here
   const isbn = req.params.isbn;
-  const book = await new Promise ((resolve, reject) => {
-    resolve(books[isbn]);
-  })
+  const book = books[isbn];
   if (book) {
     return res.status(200).json(book.reviews);
   }
