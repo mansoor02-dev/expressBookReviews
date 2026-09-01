@@ -6,8 +6,8 @@ const public_users = express.Router();
 
 
 public_users.post("/register", (req,res) => {
-  const username = req.body.username;
-  const password = req.body.password;
+  const username = req.query.username || req.body.username;
+  const password = req.query.password || req.body.password;
 
   if (username && password) {
     if (isValid(username)) {
@@ -19,14 +19,6 @@ public_users.post("/register", (req,res) => {
   }
   return res.status(404).json({message: "Please enter username or password"});
 });
-
-// Get the book list available in the shop
-
-// ====== Sync =======
-// public_users.get('/',function (req, res) {
-//   //Write your code here
-//   return res.send(JSON.stringify(books, null, 4));
-// });
 
 // ====== Async =======
 public_users.get('/',async function (req, res) {
